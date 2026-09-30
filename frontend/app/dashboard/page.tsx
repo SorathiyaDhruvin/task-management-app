@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { PlusCircle, Clock, CheckCircle2, AlertCircle, CheckSquare } from 'lucide-react';
 
 export default function Dashboard() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +41,11 @@ export default function Dashboard() {
       if (res.success && res.data) {
         setTasks(res.data);
       } else {
+        if (res.error?.code === 'INVALID_TOKEN' || res.error?.code === 'TOKEN_EXPIRED') {
+          await signOut();
+          router.push('/login');
+          return;
+        }
         setError(res.error?.message || 'Failed to load tasks');
       }
     } catch (err) {
