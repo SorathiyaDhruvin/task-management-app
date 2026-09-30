@@ -20,6 +20,7 @@ export interface Task {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  parent_id?: string | null;
   created_by_profile?: User;
   assigned_to_profile?: User;
 }
@@ -30,6 +31,7 @@ export interface CreateTaskRequest {
   priority: TaskPriority;
   assigned_to: string;
   due_date?: string;
+  parent_id?: string;
 }
 
 export interface UpdateTaskRequest {

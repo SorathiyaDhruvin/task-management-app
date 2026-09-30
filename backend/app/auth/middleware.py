@@ -14,20 +14,25 @@ def require_auth(f):
         
         token = auth_header.split(' ')[1]
         try:
-            # Use Supabase SDK to verify token and get user
-            from app.extensions import supabase
-            user_response = supabase.auth.get_user(token)
+            # Decode the Supabase JWT
+            decoded = jwt.decode(
+                token, 
+                Config.SUPABASE_JWT_SECRET, 
+                algorithms=["HS256"],
+                audience="authenticated"
+            )
+            # Attach user ID to flask global context
+            g.user_id = decoded.get('sub')
+            g.email = decoded.get('email')
             
-            if not user_response or not user_response.user:
+            if not g.user_id:
                 return error_response('INVALID_TOKEN', 'Token missing user ID', 401)
                 
-            # Attach user ID to flask global context
-            g.user_id = user_response.user.id
-            g.email = user_response.user.email
-                
-        except Exception as e:
-            logging.error(f"Token Validation Error: {e}")
-            return error_response('INVALID_TOKEN', 'Invalid token or expired', 401)
+        except jwt.ExpiredSignatureError:
+            return error_response('TOKEN_EXPIRED', 'Token has expired', 401)
+        except jwt.InvalidTokenError as e:
+            logging.error(f"JWT Validation Error: {e}")
+            return error_response('INVALID_TOKEN', 'Invalid token', 401)
             
         return f(*args, **kwargs)
     return decorated_function

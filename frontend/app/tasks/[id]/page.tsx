@@ -16,6 +16,7 @@ export default function TaskDetailPage() {
   
   const taskId = params.id as string;
   const [task, setTask] = useState<Task | null>(null);
+  const [subtasks, setSubtasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -29,11 +30,19 @@ export default function TaskDetailPage() {
   const fetchTask = async () => {
     try {
       setLoading(true);
-      const res = await api.tasks.get(taskId);
+      const [res, subRes] = await Promise.all([
+        api.tasks.get(taskId),
+        api.tasks.list({ parent_id: taskId })
+      ]);
+      
       if (res.success && res.data) {
         setTask(res.data);
       } else {
         setError(res.error?.message || 'Failed to load task');
+      }
+
+      if (subRes.success && subRes.data) {
+        setSubtasks(subRes.data);
       }
     } catch (err) {
       setError('An unexpected error occurred.');
@@ -145,6 +154,17 @@ export default function TaskDetailPage() {
                 </dd>
               </div>
 
+              {task.parent_id && (
+                <div className="sm:col-span-2 bg-blue-50 p-3 rounded-md">
+                  <dt className="text-sm font-medium text-blue-800">Part of Parent Task</dt>
+                  <dd className="mt-1 text-sm">
+                    <Link href={`/tasks/${task.parent_id}`} className="text-blue-600 hover:underline">
+                      View Parent Task
+                    </Link>
+                  </dd>
+                </div>
+              )}
+
               <div>
                 <dt className="text-sm font-medium text-gray-500 flex items-center gap-1"><User className="w-4 h-4"/> Assigned To</dt>
                 <dd className="mt-1 text-sm text-gray-900">
@@ -183,6 +203,53 @@ export default function TaskDetailPage() {
               )}
             </dl>
           </div>
+        </div>
+
+        {/* Subtasks Section */}
+        <div className="mt-8 bg-white shadow overflow-hidden sm:rounded-lg">
+          <div className="px-4 py-5 sm:px-6 flex justify-between items-center border-b border-gray-200">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">Subtasks</h3>
+            <Link
+              href={`/tasks/new?parent_id=${task.id}`}
+              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Add Subtask
+            </Link>
+          </div>
+          
+          {subtasks.length === 0 ? (
+            <div className="px-4 py-8 text-center text-gray-500 text-sm">
+              No subtasks found.
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-200">
+              {subtasks.map((subtask) => (
+                <li key={subtask.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <Link href={`/tasks/${subtask.id}`} className="text-sm font-medium text-blue-600 truncate hover:underline">
+                      {subtask.title}
+                    </Link>
+                    <div className="ml-2 flex-shrink-0 flex gap-2">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize
+                        ${subtask.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                          subtask.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
+                        {subtask.status.replace('_', ' ')}
+                      </span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize
+                        ${subtask.priority === 'high' ? 'bg-red-100 text-red-800' : 
+                          subtask.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                        {subtask.priority}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-xs text-gray-500 flex justify-between">
+                    <span>Assignee: {subtask.assigned_to_profile?.full_name || subtask.assigned_to_profile?.email || 'Unassigned'}</span>
+                    {subtask.due_date && <span>Due: {new Date(subtask.due_date).toLocaleDateString()}</span>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </main>
     </div>

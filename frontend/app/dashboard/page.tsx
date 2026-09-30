@@ -33,7 +33,7 @@ export default function Dashboard() {
     try {
       setLoading(true);
       setError(null);
-      const filters: Record<string, string> = {};
+      const filters: Record<string, string> = { parent_id: 'none' };
       if (filter !== 'all') {
         filters.status = filter;
       }

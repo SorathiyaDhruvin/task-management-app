@@ -15,6 +15,7 @@ def list_tasks():
     priority = request.args.get('priority')
     assigned_to = request.args.get('assigned_to')
     created_by = request.args.get('created_by')
+    parent_id = request.args.get('parent_id')
     
     try:
         query = supabase.table('tasks').select('*, created_by_profile:profiles!tasks_created_by_fkey(*), assigned_to_profile:profiles!tasks_assigned_to_fkey(*)')
@@ -27,6 +28,11 @@ def list_tasks():
             query = query.eq('assigned_to', assigned_to)
         if created_by:
             query = query.eq('created_by', created_by)
+        if parent_id is not None:
+            if parent_id.lower() == 'none' or parent_id.lower() == 'null':
+                query = query.is_('parent_id', 'null')
+            else:
+                query = query.eq('parent_id', parent_id)
             
         # Optional: restrict to user's authorized tasks (e.g., created by or assigned to them)
         # But per requirements: "A user can see tasks they created, see tasks assigned to them".
@@ -65,6 +71,7 @@ def create_task():
     priority = data.get('priority', 'medium')
     assigned_to = data.get('assigned_to')
     due_date = data.get('due_date')
+    parent_id = data.get('parent_id')
     
     if not title:
         return error_response('VALIDATION_ERROR', 'Title is required', 400)
@@ -90,6 +97,8 @@ def create_task():
         }
         if due_date:
             task_data['due_date'] = due_date
+        if parent_id:
+            task_data['parent_id'] = parent_id
 
         response = supabase.table('tasks').insert(task_data).execute()
         created_task = response.data[0]

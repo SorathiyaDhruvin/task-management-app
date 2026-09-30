@@ -1,19 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { User, TaskPriority } from '@/types';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
-import { useAuth } from '@/components/AuthProvider';
 
 export default function CreateTaskPage() {
   const router = useRouter();
-  const { user: authUser } = useAuth();
+  const searchParams = useSearchParams();
+  const parentId = searchParams.get('parent_id');
+  
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
-  const [usersLoading, setUsersLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
@@ -24,56 +24,11 @@ export default function CreateTaskPage() {
     due_date: ''
   });
 
-  // Auto-set assigned_to when authUser is available
   useEffect(() => {
-    if (authUser && !formData.assigned_to) {
-      setFormData(prev => ({ ...prev, assigned_to: authUser.id }));
-    }
-  }, [authUser]);
-
-  useEffect(() => {
-    setUsersLoading(true);
     api.users.list().then(res => {
-      if (res.success && res.data) {
-        setUsers(res.data);
-      } else {
-        // If API fails, at least add the current user
-        if (authUser) {
-          setUsers([{
-            id: authUser.id,
-            email: authUser.email || '',
-            full_name: authUser.user_metadata?.full_name || null,
-            avatar_url: authUser.user_metadata?.avatar_url || null,
-          }]);
-        }
-      }
-    }).catch(() => {
-      // Fallback: add current user if API completely fails
-      if (authUser) {
-        setUsers([{
-          id: authUser.id,
-          email: authUser.email || '',
-          full_name: authUser.user_metadata?.full_name || null,
-          avatar_url: authUser.user_metadata?.avatar_url || null,
-        }]);
-      }
-    }).finally(() => {
-      setUsersLoading(false);
+      if (res.success && res.data) setUsers(res.data);
     });
-  }, [authUser]);
-
-  // Ensure current user is always in the list
-  const displayUsers = (() => {
-    if (!authUser) return users;
-    const hasCurrentUser = users.some(u => u.id === authUser.id);
-    if (hasCurrentUser) return users;
-    return [{
-      id: authUser.id,
-      email: authUser.email || '',
-      full_name: authUser.user_metadata?.full_name || null,
-      avatar_url: authUser.user_metadata?.avatar_url || null,
-    }, ...users];
-  })();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,11 +42,16 @@ export default function CreateTaskPage() {
         priority: formData.priority,
         assigned_to: formData.assigned_to,
         due_date: formData.due_date ? new Date(formData.due_date).toISOString() : undefined,
+        parent_id: parentId || undefined,
       };
 
       const res = await api.tasks.create(payload);
       if (res.success) {
-        router.push('/dashboard');
+        if (parentId) {
+          router.push(`/tasks/${parentId}`);
+        } else {
+          router.push('/dashboard');
+        }
       } else {
         setError(res.error?.message || 'Failed to create task');
       }
@@ -114,8 +74,12 @@ export default function CreateTaskPage() {
 
         <div className="bg-white shadow overflow-hidden sm:rounded-lg">
           <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">Create New Task</h3>
-            <p className="mt-1 text-sm text-gray-500">Assign a new task to a team member.</p>
+            <h3 className="text-lg leading-6 font-medium text-gray-900">
+              {parentId ? 'Create New Subtask' : 'Create New Task'}
+            </h3>
+            <p className="mt-1 text-sm text-gray-500">
+              {parentId ? 'Assign a subtask to break down the work.' : 'Assign a new task to a team member.'}
+            </p>
           </div>
           
           <form onSubmit={handleSubmit} className="px-4 py-5 sm:p-6 space-y-6">
@@ -173,15 +137,11 @@ export default function CreateTaskPage() {
                   onChange={e => setFormData({ ...formData, assigned_to: e.target.value })}
                 >
                   <option value="">Select a user...</option>
-                  {usersLoading ? (
-                    <option disabled>Loading users...</option>
-                  ) : (
-                    displayUsers.map(u => (
-                      <option key={u.id} value={u.id}>
-                        {u.full_name || u.email}{u.id === authUser?.id ? ' (Me)' : ''}
-                      </option>
-                    ))
-                  )}
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.full_name || u.email}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
