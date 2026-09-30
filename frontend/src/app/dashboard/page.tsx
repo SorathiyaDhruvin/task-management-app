@@ -7,7 +7,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
-import { PlusCircle, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { PlusCircle, Clock, CheckCircle2, AlertCircle, CheckSquare } from 'lucide-react';
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
