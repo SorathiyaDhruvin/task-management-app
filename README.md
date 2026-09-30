@@ -86,7 +86,18 @@ The database consists of two main tables:
 4. Backend fetches the task creator's email.
 5. An asynchronous email notification is sent to the creator.
 
-## 13. Environment Variables
+## 13. End-to-End User Journey (Example)
+```mermaid
+flowchart TD
+    A[Google User A] -->|Creates Task| T[New Task]
+    T -->|Assigns to| B[Google User B]
+    B -->|Receives Email| E1[New Task Email]
+    B -->|Logs in & Sees Task| D[Dashboard]
+    B -->|Marks Complete| C[Task Completed]
+    C -->|Receives Email| E2[Completion Email sent to User A]
+```
+
+## 14. Environment Variables
 
 ### Frontend (`frontend/.env.example`)
 ```env
@@ -108,7 +119,7 @@ GMAIL_SENDER_EMAIL=your-sender-email-address
 FRONTEND_URL=http://localhost:3000
 ```
 
-## 14. Local Development Setup
+## 15. Local Development Setup
 
 ### Frontend
 ```bash
@@ -126,16 +137,16 @@ pip install -r requirements.txt
 flask run
 ```
 
-## 15. Database Migrations
+## 16. Database Migrations
 Migrations are stored in the `/migrations` folder. They define the schema for `profiles`, `tasks`, and the Supabase Auth triggers.
 To run, execute the SQL directly in the Supabase SQL Editor.
 
-## 16. Deployment
+## 17. Deployment
 - **Frontend**: Automatically deployed via Vercel on push to the `main` branch.
 - **Backend**: Deployed on Render using Gunicorn.
 - Both deployments require the environment variables to be set in their respective dashboards.
 
-## 17. API Overview
+## 18. API Overview
 - `GET /api/users`: List users for assignment.
 - `GET /api/tasks`: List tasks.
 - `POST /api/tasks`: Create a new task.
@@ -144,7 +155,7 @@ To run, execute the SQL directly in the Supabase SQL Editor.
 - `DELETE /api/tasks/<id>`: Delete a task.
 - `POST /api/auth/sync`: Sync profile on login.
 
-## 18. Security Considerations
+## 19. Security Considerations
 - **No secrets in frontend**: Service role keys and Gmail tokens are kept strictly in the backend environment.
 - **Token verification**: Every protected API route verifies the Supabase access token via the official Supabase SDK.
 - **Data isolation**: Tasks are restricted so users can only modify tasks they created or were assigned.
