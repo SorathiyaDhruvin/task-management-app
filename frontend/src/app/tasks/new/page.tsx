@@ -6,11 +6,14 @@ import { api } from '@/lib/api';
 import { User, TaskPriority } from '@/types';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function CreateTaskPage() {
   const router = useRouter();
+  const { user: authUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
+  const [usersLoading, setUsersLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
@@ -21,11 +24,56 @@ export default function CreateTaskPage() {
     due_date: ''
   });
 
+  // Auto-set assigned_to when authUser is available
   useEffect(() => {
+    if (authUser && !formData.assigned_to) {
+      setFormData(prev => ({ ...prev, assigned_to: authUser.id }));
+    }
+  }, [authUser]);
+
+  useEffect(() => {
+    setUsersLoading(true);
     api.users.list().then(res => {
-      if (res.success && res.data) setUsers(res.data);
+      if (res.success && res.data) {
+        setUsers(res.data);
+      } else {
+        // If API fails, at least add the current user
+        if (authUser) {
+          setUsers([{
+            id: authUser.id,
+            email: authUser.email || '',
+            full_name: authUser.user_metadata?.full_name || null,
+            avatar_url: authUser.user_metadata?.avatar_url || null,
+          }]);
+        }
+      }
+    }).catch(() => {
+      // Fallback: add current user if API completely fails
+      if (authUser) {
+        setUsers([{
+          id: authUser.id,
+          email: authUser.email || '',
+          full_name: authUser.user_metadata?.full_name || null,
+          avatar_url: authUser.user_metadata?.avatar_url || null,
+        }]);
+      }
+    }).finally(() => {
+      setUsersLoading(false);
     });
-  }, []);
+  }, [authUser]);
+
+  // Ensure current user is always in the list
+  const displayUsers = (() => {
+    if (!authUser) return users;
+    const hasCurrentUser = users.some(u => u.id === authUser.id);
+    if (hasCurrentUser) return users;
+    return [{
+      id: authUser.id,
+      email: authUser.email || '',
+      full_name: authUser.user_metadata?.full_name || null,
+      avatar_url: authUser.user_metadata?.avatar_url || null,
+    }, ...users];
+  })();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,11 +173,15 @@ export default function CreateTaskPage() {
                   onChange={e => setFormData({ ...formData, assigned_to: e.target.value })}
                 >
                   <option value="">Select a user...</option>
-                  {users.map(u => (
-                    <option key={u.id} value={u.id}>
-                      {u.full_name || u.email}
-                    </option>
-                  ))}
+                  {usersLoading ? (
+                    <option disabled>Loading users...</option>
+                  ) : (
+                    displayUsers.map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.full_name || u.email}{u.id === authUser?.id ? ' (Me)' : ''}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
             </div>
