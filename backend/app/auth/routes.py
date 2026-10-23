@@ -21,7 +21,7 @@ def get_me():
 @auth_bp.route('/sync', methods=['POST'])
 @require_auth
 def sync_profile():
-    data = request.json
+    data = request.get_json(silent=True) or {}
     full_name = data.get('full_name')
     avatar_url = data.get('avatar_url')
     
@@ -37,7 +37,8 @@ def sync_profile():
             
         # Upsert the profile
         response = supabase.table('profiles').upsert(profile_data).execute()
-        return success_response(response.data[0], 201)
+        synced_data = response.data[0] if response.data else profile_data
+        return success_response(synced_data, 201)
     except Exception as e:
         logging.error(f"Error syncing profile: {e}")
         return error_response('INTERNAL_ERROR', 'An error occurred', 500)

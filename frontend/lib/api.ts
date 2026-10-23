@@ -28,7 +28,8 @@ async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Pr
 
 export const api = {
   auth: {
-    syncProfile: () => fetchWithAuth<User>('/auth/sync', { method: 'POST', body: JSON.stringify({}) }),
+    syncProfile: (profile?: { full_name?: string | null; avatar_url?: string | null }) =>
+      fetchWithAuth<User>('/auth/sync', { method: 'POST', body: JSON.stringify(profile || {}) }),
     getMe: () => fetchWithAuth<User>('/auth/me', { method: 'GET' }),
   },
   users: {

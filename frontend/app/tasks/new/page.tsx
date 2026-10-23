@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { User, TaskPriority } from '@/types';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 
-export default function CreateTaskPage() {
+function CreateTaskContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const parentId = searchParams.get('parent_id');
@@ -178,3 +178,16 @@ export default function CreateTaskPage() {
     </div>
   );
 }
+
+export default function CreateTaskPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <CreateTaskContent />
+    </Suspense>
+  );
+}
+

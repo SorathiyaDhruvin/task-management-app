@@ -28,12 +28,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
+    const syncUserProfile = (authUser: User) => {
+      const metadata = authUser.user_metadata || {};
+      const full_name = metadata.full_name || metadata.name || null;
+      const avatar_url = metadata.avatar_url || metadata.picture || null;
+      api.auth.syncProfile({ full_name, avatar_url }).catch(console.error);
+    };
+
     // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        // Sync profile to backend on login
-        api.auth.syncProfile().catch(console.error);
+        syncUserProfile(session.user);
       }
       setLoading(false);
     });
@@ -43,9 +49,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       (_event, session) => {
         setUser(session?.user ?? null);
         if (session?.user) {
-           api.auth.syncProfile().catch(console.error);
+          syncUserProfile(session.user);
         } else {
-           router.push('/login');
+          router.push('/login');
         }
         setLoading(false);
       }

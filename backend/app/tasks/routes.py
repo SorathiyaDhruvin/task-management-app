@@ -65,7 +65,7 @@ def get_task(task_id):
 @tasks_bp.route('', methods=['POST'])
 @require_auth
 def create_task():
-    data = request.json
+    data = request.get_json(silent=True) or {}
     title = data.get('title')
     description = data.get('description')
     priority = data.get('priority', 'medium')
@@ -118,8 +118,8 @@ def create_task():
 @tasks_bp.route('/<task_id>', methods=['PATCH'])
 @require_auth
 def update_task(task_id):
-    data = request.json
-    allowed_fields = ['title', 'description', 'priority', 'assigned_to', 'due_date', 'status']
+    data = request.get_json(silent=True) or {}
+    allowed_fields = ['title', 'description', 'priority', 'assigned_to', 'due_date', 'status', 'parent_id']
     update_data = {k: v for k, v in data.items() if k in allowed_fields}
     
     if not update_data:
@@ -135,6 +135,12 @@ def update_task(task_id):
         if task['created_by'] != g.user_id and task['assigned_to'] != g.user_id:
             return error_response('FORBIDDEN', 'You are not authorized to update this task', 403)
             
+        # Manage completed_at timestamp
+        if update_data.get('status') == 'completed' and task.get('status') != 'completed':
+            update_data['completed_at'] = datetime.utcnow().isoformat()
+        elif 'status' in update_data and update_data['status'] != 'completed':
+            update_data['completed_at'] = None
+
         response = supabase.table('tasks').update(update_data).eq('id', task_id).execute()
         return success_response(response.data[0])
     except Exception as e:

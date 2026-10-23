@@ -15,6 +15,7 @@ CREATE TABLE tasks (
     priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
     created_by UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     assigned_to UUID REFERENCES profiles(id) ON DELETE SET NULL,
+    parent_id UUID REFERENCES tasks(id) ON DELETE CASCADE,
     due_date TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -23,6 +24,7 @@ CREATE TABLE tasks (
 
 CREATE INDEX idx_tasks_created_by ON tasks(created_by);
 CREATE INDEX idx_tasks_assigned_to ON tasks(assigned_to);
+CREATE INDEX idx_tasks_parent_id ON tasks(parent_id);
 CREATE INDEX idx_tasks_status ON tasks(status);
 CREATE INDEX idx_tasks_created_at ON tasks(created_at);
 
